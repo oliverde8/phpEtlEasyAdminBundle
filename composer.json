@@ -1,0 +1,22 @@
+{
+  "name": "oliverde8/php-etl-easyadmin-bundle",
+  "type": "library",
+  "description": "Add interfaces to see execution & to run executions of the php-etl.",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Oliver de Cramer",
+      "homepage": "http://oliver-decramer.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4.0",
+    "oliverde8/php-et-bundle": "~1.0",
+    "easycorp/easyadmin-bundle": "^3.2",
+  },
+  "autoload": {
+    "psr-4": {
+      "Oliverde8\\PhpEtlEasyAdminBundle\\": "."
+    }
+  }
+}
