@@ -1,4 +1,4 @@
-# PHP Etl Bundle
+# PHP Etl Easy Admin Bundle
 
 <!-- TO BE COMPLETED -->
 

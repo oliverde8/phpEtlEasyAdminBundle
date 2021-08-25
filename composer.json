@@ -12,7 +12,7 @@
   "require": {
     "php": ">=7.4.0",
     "oliverde8/php-et-bundle": "~1.0",
-    "easycorp/easyadmin-bundle": "^3.2",
+    "easycorp/easyadmin-bundle": "^3.2"
   },
   "autoload": {
     "psr-4": {
