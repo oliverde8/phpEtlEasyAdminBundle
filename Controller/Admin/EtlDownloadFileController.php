@@ -6,24 +6,26 @@ namespace Oliverde8\PhpEtlEasyAdminBundle\Controller\Admin;
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Oliverde8\PhpEtlBundle\Services\ChainWorkDirManager;
+use Oliverde8\PhpEtlBundle\Services\ExecutionContextFactory;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
 class EtlDownloadFileController extends AbstractController
 {
-    /** @var ChainWorkDirManager */
-    protected $chainWorkDirManager;
+    /** @var ExecutionContextFactory */
+    protected $executionContextFactory;
 
     /**
-     * EtlDownloadFileController constructor.
-     * @param ChainWorkDirManager $chainWorkDirManager
+     * @param ExecutionContextFactory $executionContextFactory
      */
-    public function __construct(ChainWorkDirManager $chainWorkDirManager)
+    public function __construct(ExecutionContextFactory $executionContextFactory)
     {
-        $this->chainWorkDirManager = $chainWorkDirManager;
+        $this->executionContextFactory = $executionContextFactory;
     }
 
     /**
@@ -34,10 +36,20 @@ class EtlDownloadFileController extends AbstractController
     {
         $this->denyAccessUnlessGranted(EtlExecutionVoter::DOWNLOAD, EtlExecution::class);
 
-        //TODO add Acl here for future proofing.
-        return $this->file(
-            $this->chainWorkDirManager->getWorkDir($execution) . "/" . $filename,
+        $context = $this->executionContextFactory->get(['etl' => ['execution' => $execution]]);
+        $file = $context->getFileSystem()->readStream($filename);
+
+        $response = new StreamedResponse(function () use ($file) {
+            $outputStream = fopen('php://output', 'wb');
+            stream_copy_to_stream($file, $outputStream);
+        });
+
+        $disposition = HeaderUtils::makeDisposition(
+            HeaderUtils::DISPOSITION_ATTACHMENT,
             "execution-{$execution->getName()}-{$execution->getId()}-" . $filename
         );
+        $response->headers->set('Content-Disposition', $disposition);
+
+        return $response;
     }
 }

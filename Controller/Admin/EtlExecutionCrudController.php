@@ -20,11 +20,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Oliverde8\PhpEtlBundle\Services\ChainProcessorsManager;
 use Oliverde8\PhpEtlBundle\Services\ChainWorkDirManager;
+use Oliverde8\PhpEtlBundle\Services\ExecutionContextFactory;
 
 class EtlExecutionCrudController extends AbstractCrudController
 {
-    /** @var ChainWorkDirManager */
-    protected $chainWorkDirManager;
+    /** @var ExecutionContextFactory */
+    protected $executionContextFactory;
 
     /** @var ChainProcessorsManager */
     protected $chainProcessorManager;
@@ -32,21 +33,16 @@ class EtlExecutionCrudController extends AbstractCrudController
     /** @var AdminUrlGenerator */
     protected $adminUrlGenerator;
 
-    /**
-     * EtlExecutionCrudController constructor.
-     * @param ChainWorkDirManager $chainWorkDirManager
-     * @param ChainProcessorsManager $chainProcessorManager
-     * @param AdminUrlGenerator $adminUrlGenerator
-     */
     public function __construct(
-        ChainWorkDirManager $chainWorkDirManager,
+        ExecutionContextFactory $executionContextFactory,
         ChainProcessorsManager $chainProcessorManager,
         AdminUrlGenerator $adminUrlGenerator
     ) {
-        $this->chainWorkDirManager = $chainWorkDirManager;
+        $this->executionContextFactory = $executionContextFactory;
         $this->chainProcessorManager = $chainProcessorManager;
         $this->adminUrlGenerator = $adminUrlGenerator;
     }
+
 
     public static function getEntityFqcn(): string
     {
@@ -105,21 +101,35 @@ class EtlExecutionCrudController extends AbstractCrudController
                 TextField::new('Files')->formatValue(function ($value, EtlExecution $entity) {
                     $urls = [];
                     if ($this->isGranted(EtlExecutionVoter::DOWNLOAD, EtlExecution::class)) {
-                        $files = $this->chainWorkDirManager->listFiles($entity);
-                        foreach ($files as $file) {
-                            $url = $this->adminUrlGenerator
-                                ->setRoute("etl_execution_download_file", ['execution' => $entity->getId(), 'filename' => $file])
-                                ->generateUrl();
 
-                            $urls[$url] = $file;
+                        $context = $this->executionContextFactory->get(['etl' => ['execution' => $entity]]);
+                        $files = $context->getFileSystem()->listContents("/");
+                        foreach ($files as $file) {
+                            if (strpos($file, '.') !== 0) {
+                                $url = $this->adminUrlGenerator
+                                    ->setRoute("etl_execution_download_file", ['execution' => $entity->getId(), 'filename' => $file])
+                                    ->generateUrl();
+
+                                $urls[$url] = $file;
+                            }
                         }
                     }
 
                     return $urls;
                 })->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/files.html.twig'),
+
                 CodeEditorField::new('errorMessage')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig'),
                 TextField::new('Logs')->formatValue(function ($value, EtlExecution $entity) {
-                    $logs = $this->chainWorkDirManager->getFirstLogLines($entity, 100);
+                    $context = $this->executionContextFactory->get(['etl' => ['execution' => $entity]]);
+                    $logs = [];
+                    $file = $context->getFileSystem()->readStream("execution.log");
+                    $i = 0;
+                    while ($i < 100 && $line = fgets($file)) {
+                        $logs[] = $line;
+                        $i++;
+                    }
+                    fclose($file);
+
                     $url = "";
                     $moreLogs = false;
                     if (!empty($logs)) {

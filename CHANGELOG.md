@@ -1,3 +1,8 @@
+# 1.0.0 
+- :confetti_ball: :tada: First stable release :tada: :confetti_ball:
+- :star2: Added support for php etl 1.0 stable release.
+- :star2: Added support for symfony 6
+- :wrench: Download of ETL file execution will now work with even big files. (Not limited by memory)
 
 # 1.0.0 Alpha #2
 
