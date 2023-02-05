@@ -122,13 +122,15 @@ class EtlExecutionCrudController extends AbstractCrudController
                 TextField::new('Logs')->formatValue(function ($value, EtlExecution $entity) {
                     $context = $this->executionContextFactory->get(['etl' => ['execution' => $entity]]);
                     $logs = [];
-                    $file = $context->getFileSystem()->readStream("execution.log");
-                    $i = 0;
-                    while ($i < 100 && $line = fgets($file)) {
-                        $logs[] = $line;
-                        $i++;
+                    if ($context->getFileSystem()->fileExists("execution.log")) {
+                        $file = $context->getFileSystem()->readStream("execution.log");
+                        $i = 0;
+                        while ($i < 100 && $line = fgets($file)) {
+                            $logs[] = $line;
+                            $i++;
+                        }
+                        fclose($file);
                     }
-                    fclose($file);
 
                     $url = "";
                     $moreLogs = false;
@@ -220,7 +222,7 @@ class EtlExecutionCrudController extends AbstractCrudController
     protected function getChainOptions()
     {
         $options = [];
-        foreach (array_keys($this->chainProcessorManager->getDefinitions()) as $definitionName) {
+        foreach (array_keys($this->chainProcessorManager->getRewDefinitions()) as $definitionName) {
             $options[$definitionName] = $definitionName;
         }
 

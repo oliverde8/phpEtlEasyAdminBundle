@@ -1,3 +1,6 @@
+# 1.1.0
+- :star2: Support for phpEtlBundle 1.1 was added.
+
 # 1.0.0 
 - :confetti_ball: :tada: First stable release :tada: :confetti_ball:
 - :star2: Added support for php etl 1.0 stable release.
