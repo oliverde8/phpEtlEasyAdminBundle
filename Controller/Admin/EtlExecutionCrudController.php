@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Oliverde8\PhpEtlEasyAdminBundle\Controller\Admin;
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -8,6 +10,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
+use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CodeEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\Field;
@@ -16,33 +19,15 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
-use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Oliverde8\PhpEtlBundle\Services\ChainProcessorsManager;
-use Oliverde8\PhpEtlBundle\Services\ChainWorkDirManager;
 use Oliverde8\PhpEtlBundle\Services\ExecutionContextFactory;
 
 class EtlExecutionCrudController extends AbstractCrudController
 {
-    /** @var ExecutionContextFactory */
-    protected $executionContextFactory;
-
-    /** @var ChainProcessorsManager */
-    protected $chainProcessorManager;
-
-    /** @var AdminUrlGenerator */
-    protected $adminUrlGenerator;
-
-    public function __construct(
-        ExecutionContextFactory $executionContextFactory,
-        ChainProcessorsManager $chainProcessorManager,
-        AdminUrlGenerator $adminUrlGenerator
-    ) {
-        $this->executionContextFactory = $executionContextFactory;
-        $this->chainProcessorManager = $chainProcessorManager;
-        $this->adminUrlGenerator = $adminUrlGenerator;
+    public function __construct(protected ExecutionContextFactory $executionContextFactory, protected ChainProcessorsManager $chainProcessorManager, protected AdminUrlGenerator $adminUrlGenerator)
+    {
     }
-
 
     public static function getEntityFqcn(): string
     {
@@ -62,6 +47,7 @@ class EtlExecutionCrudController extends AbstractCrudController
         if (!$this->isGranted(EtlExecutionVoter::QUEUE, EtlExecution::class)) {
             $actions->remove(Crud::PAGE_INDEX, Action::NEW);
         }
+
         if (!$this->isGranted(EtlExecutionVoter::VIEW, EtlExecution::class)) {
             $actions->remove(Crud::PAGE_INDEX, Action::DETAIL);
         }
@@ -72,9 +58,9 @@ class EtlExecutionCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
-            ->setPageTitle("index", "Etl Executions")
+            ->setPageTitle('index', 'Etl Executions')
             ->setDateTimeFormat('dd/MM/y - HH:mm:ss')
-            ->setSearchFields(["name", "id"])
+            ->setSearchFields(['name', 'id'])
             ->setDefaultSort(['id' => 'DESC']);
     }
 
@@ -82,32 +68,32 @@ class EtlExecutionCrudController extends AbstractCrudController
     {
         if (Crud::PAGE_DETAIL === $pageName) {
             return [
-                FormField::addPanel("Details")->addCssClass("col-12 col-xl-6"),
+                FormField::addFieldset('Details')->addCssClass('col-12 col-xl-6'),
                 Field::new('name'),
                 Field::new('username'),
                 TextField::new('status')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/status.html.twig'),
-                FormField::addPanel()->addCssClass("col-12 col-xl-6"),
+                FormField::addFieldset()->addCssClass('col-12 col-xl-6'),
                 Field::new('createTime'),
                 Field::new('startTime'),
                 Field::new('endTime'),
                 Field::new('failTime'),
 
-                FormField::addPanel('Execution Inputs')->addCssClass('col-12'),
+                FormField::addFieldset('Execution Inputs')->addCssClass('col-12'),
                 CodeEditorField::new('inputData')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig')->addCssClass('etl-json-div'),
                 CodeEditorField::new('inputOptions')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig')->addCssClass('etl-json-div'),
                 CodeEditorField::new('definition')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig'),
 
-                FormField::addPanel('Execution outpus')->addCssClass("col-12"),
-                TextField::new('Files')->formatValue(function ($value, EtlExecution $entity) {
+                FormField::addFieldset('Execution outpus')->addCssClass('col-12'),
+                TextField::new('Files')->formatValue(function ($value, EtlExecution $entity): array {
                     $urls = [];
                     if ($this->isGranted(EtlExecutionVoter::DOWNLOAD, EtlExecution::class)) {
 
                         $context = $this->executionContextFactory->get(['etl' => ['execution' => $entity]]);
-                        $files = $context->getFileSystem()->listContents("/");
+                        $files   = $context->getFileSystem()->listContents('/');
                         foreach ($files as $file) {
-                            if (strpos($file, '.') !== 0) {
+                            if (!str_starts_with($file, '.')) {
                                 $url = $this->adminUrlGenerator
-                                    ->setRoute("etl_execution_download_file", ['execution' => $entity->getId(), 'filename' => $file])
+                                    ->setRoute('etl_execution_download_file', ['execution' => $entity->getId(), 'filename' => $file])
                                     ->generateUrl();
 
                                 $urls[$url] = $file;
@@ -119,39 +105,42 @@ class EtlExecutionCrudController extends AbstractCrudController
                 })->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/files.html.twig'),
 
                 CodeEditorField::new('errorMessage')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig'),
-                TextField::new('Logs')->formatValue(function ($value, EtlExecution $entity) {
+                TextField::new('Logs')->formatValue(function ($value, EtlExecution $entity): array {
                     $context = $this->executionContextFactory->get(['etl' => ['execution' => $entity]]);
-                    $logs = [];
-                    if ($context->getFileSystem()->fileExists("execution.log")) {
-                        $file = $context->getFileSystem()->readStream("execution.log");
-                        $i = 0;
+                    $logs    = [];
+                    if ($context->getFileSystem()->fileExists('execution.log')) {
+                        $file = $context->getFileSystem()->readStream('execution.log');
+                        $i    = 0;
                         while ($i < 100 && $line = fgets($file)) {
                             $logs[] = $line;
-                            $i++;
+                            ++$i;
                         }
+
                         fclose($file);
                     }
 
-                    $url = "";
+                    $url      = '';
                     $moreLogs = false;
-                    if (!empty($logs)) {
+                    if ([] !== $logs) {
                         $url = $this->adminUrlGenerator
-                            ->setRoute("etl_execution_download_file", ['execution' => $entity->getId(), 'filename' => 'execution.log'])
+                            ->setRoute('etl_execution_download_file', ['execution' => $entity->getId(), 'filename' => 'execution.log'])
                             ->generateUrl();
                     }
-                    if (count($logs) > 100) {
+
+                    if (\count($logs) > 100) {
                         $moreLogs = true;
                     }
 
                     return [
-                        "lines" => $logs,
+                        'lines'       => $logs,
                         'downloadUrl' => $url,
-                        'moreLogs' => $moreLogs,
+                        'moreLogs'    => $moreLogs,
                     ];
                 })->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/logs.html.twig'),
 
             ];
         }
+
         if (Crud::PAGE_INDEX === $pageName) {
             return [
                 Field::new('id'),
@@ -163,12 +152,13 @@ class EtlExecutionCrudController extends AbstractCrudController
                 Field::new('endTime'),
             ];
         }
+
         if (Crud::PAGE_NEW === $pageName) {
             return [
                 ChoiceField::new('name', 'Chain Name')
                     ->setChoices($this->getChainOptions()),
-                CodeEditorField::new('inputData')->setCssClass("etl-json-input"),
-                CodeEditorField::new('inputOptions')->setCssClass("etl-json-input"),
+                CodeEditorField::new('inputData')->setCssClass('etl-json-input'),
+                CodeEditorField::new('inputOptions')->setCssClass('etl-json-input'),
             ];
         }
 
@@ -200,16 +190,17 @@ class EtlExecutionCrudController extends AbstractCrudController
             ->add('endTime');
     }
 
-    public function createEntity(string $entityFqcn)
+    public function createEntity(string $entityFqcn): object
     {
-        $user = $this->getUser();
+        $user     = $this->getUser();
         $username = null;
-        if ($user) {
-            $username = $user->getUsername();
+        if ($user instanceof \Symfony\Component\Security\Core\User\UserInterface) {
+            $username = $user->getUserIdentifier();
         }
 
-        $execution = new EtlExecution("", "", [], []);
+        $execution = new EtlExecution('', '', [], []);
         $execution->setUsername($username);
+
         return $execution;
     }
 
@@ -219,10 +210,13 @@ class EtlExecutionCrudController extends AbstractCrudController
         $entityManager->flush();
     }
 
-    protected function getChainOptions()
+    /**
+     * @return int[]|string[]
+     */
+    protected function getChainOptions(): array
     {
         $options = [];
-        foreach (array_keys($this->chainProcessorManager->getRewDefinitions()) as $definitionName) {
+        foreach (array_keys($this->chainProcessorManager->getRawDefinitions()) as $definitionName) {
             $options[$definitionName] = $definitionName;
         }
 

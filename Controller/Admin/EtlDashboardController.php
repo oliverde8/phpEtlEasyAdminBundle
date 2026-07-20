@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Oliverde8\PhpEtlEasyAdminBundle\Controller\Admin;
 
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
@@ -11,19 +13,12 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class EtlDashboardController extends AbstractController
 {
-
-    protected EtlExecutionRepository $etlExecutionRepository;
-
     /**
      * EtlDashboardController constructor.
-     *
-     * @param EtlExecutionRepository $etlExecutionRepository
      */
-    public function __construct(EtlExecutionRepository $etlExecutionRepository)
+    public function __construct(protected EtlExecutionRepository $etlExecutionRepository)
     {
-        $this->etlExecutionRepository = $etlExecutionRepository;
     }
-
 
     /**
      * @Route("/etl/execution/dashboard", name="etl_execution_dashboard")
@@ -32,28 +27,28 @@ class EtlDashboardController extends AbstractController
     {
         $this->denyAccessUnlessGranted(EtlExecutionVoter::DASHBOARD, EtlExecution::class);
 
-        if (is_null($endDate)) {
+        if (null === $endDate) {
             $endDate = new \DateTime();
         }
 
-        if (is_null($startDate)) {
+        if (null === $startDate) {
             $startDate = new \DateTime('7 days ago');
         }
 
-        //TODO add Acl here for future proofing.
+        // TODO add Acl here for future proofing.
         return $this->render(
-            "@Oliverde8PhpEtlEasyAdmin/admin/dashboard.html.twig",
+            '@Oliverde8PhpEtlEasyAdmin/admin/dashboard.html.twig',
             [
-                'num_waiting' => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_WAITING),
-                'num_running' => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_RUNNING),
-                'num_success' => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_SUCCESS),
-                'num_failure' => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_FAILURE),
-                'max_wait_time' => $this->etlExecutionRepository->getMaxWaitTime($startDate, $endDate),
-                'avg_wait_time' => $this->etlExecutionRepository->getAvgWaitTime($startDate, $endDate),
-                'most_executed' => $this->etlExecutionRepository->getMostExecutedJobs($startDate, $endDate, 10),
+                'num_waiting'     => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_WAITING),
+                'num_running'     => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_RUNNING),
+                'num_success'     => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_SUCCESS),
+                'num_failure'     => $this->etlExecutionRepository->getCountInStatus($startDate, $endDate, EtlExecution::STATUS_FAILURE),
+                'max_wait_time'   => $this->etlExecutionRepository->getMaxWaitTime($startDate, $endDate),
+                'avg_wait_time'   => $this->etlExecutionRepository->getAvgWaitTime($startDate, $endDate),
+                'most_executed'   => $this->etlExecutionRepository->getMostExecutedJobs($startDate, $endDate, 10),
                 'most_time_spent' => $this->etlExecutionRepository->getMostTimeSpentJobs($startDate, $endDate, 10),
-                'longest' => $this->etlExecutionRepository->getLongestJobs($startDate, $endDate, 10),
-                'crudController' => EtlExecutionCrudController::class
+                'longest'         => $this->etlExecutionRepository->getLongestJobs($startDate, $endDate, 10),
+                'crudController'  => EtlExecutionCrudController::class,
             ]
         );
     }
