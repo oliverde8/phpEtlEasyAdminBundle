@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Oliverde8\PhpEtlEasyAdminBundle\Controller\Admin;
 
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
 use Oliverde8\PhpEtlBundle\Repository\EtlExecutionRepository;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
 
 class EtlDashboardController extends AbstractController
 {
@@ -21,8 +21,12 @@ class EtlDashboardController extends AbstractController
     }
 
     /**
-     * @Route("/etl/execution/dashboard", name="etl_execution_dashboard")
+     * Rendered as an EasyAdmin route so the request carries the AdminContext the
+     * dashboard template needs (the "ea" Twig global + the admin layout/menu).
+     * The final route name/path are prefixed with the app dashboard's
+     * (e.g. name "admin_etl_execution_dashboard", path "/admin/etl/execution/dashboard").
      */
+    #[AdminRoute(path: '/etl/execution/dashboard', name: 'etl_execution_dashboard')]
     public function index($startDate = null, $endDate = null): Response
     {
         $this->denyAccessUnlessGranted(EtlExecutionVoter::DASHBOARD, EtlExecution::class);

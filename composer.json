@@ -10,7 +10,7 @@
     }
   ],
   "require": {
-    "php": ">=8.0",
+    "php": ">=8.2",
     "oliverde8/php-etl-bundle": "^v2.0.0-alpha1",
     "easycorp/easyadmin-bundle": "^5.0"
   },
