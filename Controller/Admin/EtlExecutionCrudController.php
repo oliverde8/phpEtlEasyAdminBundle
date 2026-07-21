@@ -7,6 +7,7 @@ namespace Oliverde8\PhpEtlEasyAdminBundle\Controller\Admin;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Asset;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
@@ -20,10 +21,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
 use Oliverde8\PhpEtlBundle\Etl\ChainDefinitionInterface\ChainDefinitionInterface;
+use Oliverde8\PhpEtlBundle\Observability\ExecutionStatePublisherInterface;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Oliverde8\PhpEtlBundle\Services\ChainProcessorsManager;
 use Oliverde8\PhpEtlBundle\Services\ExecutionContextFactory;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class EtlExecutionCrudController extends AbstractCrudController
 {
@@ -34,6 +37,8 @@ class EtlExecutionCrudController extends AbstractCrudController
         protected ExecutionContextFactory $executionContextFactory,
         protected ChainProcessorsManager $chainProcessorManager,
         protected AdminUrlGenerator $adminUrlGenerator,
+        protected ExecutionStatePublisherInterface $statePublisher,
+        protected RequestStack $requestStack,
         #[AutowireIterator('etl.chain_definition')]
         protected iterable $chainDefinitions = [],
     ) {
@@ -71,22 +76,24 @@ class EtlExecutionCrudController extends AbstractCrudController
             ->setPageTitle('index', 'Etl Executions')
             ->setDateTimeFormat('dd/MM/y - HH:mm:ss')
             ->setSearchFields(['name', 'id'])
-            ->setDefaultSort(['id' => 'DESC']);
+            ->setDefaultSort(['id' => 'DESC'])
+            // The detail page's graph sidebar needs the full viewport width, not
+            // EasyAdmin's centered/capped content column.
+            ->renderContentMaximized();
     }
 
     public function configureFields(string $pageName): iterable
     {
         if (Crud::PAGE_DETAIL === $pageName) {
             return [
-                FormField::addFieldset('Details')->addCssClass('col-12 col-xl-6'),
-                Field::new('name'),
-                Field::new('username'),
-                TextField::new('status')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/status.html.twig'),
-                FormField::addFieldset()->addCssClass('col-12 col-xl-6'),
-                Field::new('createTime'),
-                Field::new('startTime'),
-                Field::new('endTime'),
-                Field::new('failTime'),
+                // Name/username/status/timestamps are rendered inside the graph
+                // widget's own header now (see execution-graph.js), instead of a
+                // separate fieldset — the widget already fetches that data.
+                FormField::addFieldset()->addCssClass('col-12'),
+                TextField::new('graph')
+                    ->setLabel(false)
+                    ->formatValue(fn ($value, EtlExecution $entity): array => ['mercure' => $this->graphMercureConfig($entity)])
+                    ->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/graph.html.twig'),
 
                 FormField::addFieldset('Execution Inputs')->addCssClass('col-12'),
                 CodeEditorField::new('inputData')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig')->addCssClass('etl-json-div'),
@@ -115,39 +122,6 @@ class EtlExecutionCrudController extends AbstractCrudController
                 })->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/files.html.twig'),
 
                 CodeEditorField::new('errorMessage')->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/code_editor.html.twig'),
-                TextField::new('Logs')->formatValue(function ($value, EtlExecution $entity): array {
-                    $context = $this->executionContextFactory->get(['etl' => ['execution' => $entity]]);
-                    $logs    = [];
-                    if ($context->getFileSystem()->fileExists('execution.log')) {
-                        $file = $context->getFileSystem()->readStream('execution.log');
-                        $i    = 0;
-                        while ($i < 100 && $line = fgets($file)) {
-                            $logs[] = $line;
-                            ++$i;
-                        }
-
-                        fclose($file);
-                    }
-
-                    $url      = '';
-                    $moreLogs = false;
-                    if ([] !== $logs) {
-                        $url = $this->adminUrlGenerator
-                            ->setRoute('etl_execution_download_file', ['execution' => $entity->getId(), 'filename' => 'execution.log'])
-                            ->generateUrl();
-                    }
-
-                    if (\count($logs) > 100) {
-                        $moreLogs = true;
-                    }
-
-                    return [
-                        'lines'       => $logs,
-                        'downloadUrl' => $url,
-                        'moreLogs'    => $moreLogs,
-                    ];
-                })->setTemplatePath('@Oliverde8PhpEtlEasyAdmin/fields/logs.html.twig'),
-
             ];
         }
 
@@ -180,7 +154,45 @@ class EtlExecutionCrudController extends AbstractCrudController
         return $assets
             ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/vendor/jsoneditor/9.4.1/jsoneditor.min.js')
             ->addCssFile('/bundles/oliverde8phpetleasyadmin/admin/vendor/jsoneditor/9.4.1/jsoneditor.min.css')
-            ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/fields/json-editor.js');
+            ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/fields/json-editor.js')
+            // Live execution graph — assets shipped by the php-etl bundle, detail page only.
+            // Load order matters: cytoscape + dagre before the cytoscape-dagre layout adapter.
+            ->addCssFile(Asset::new('/bundles/oliverde8phpetl/css/execution-graph.css')->onlyOnDetail())
+            ->addJsFile(Asset::new('/bundles/oliverde8phpetl/vendor/cytoscape.min.js')->onlyOnDetail())
+            ->addJsFile(Asset::new('/bundles/oliverde8phpetl/vendor/dagre.min.js')->onlyOnDetail())
+            ->addJsFile(Asset::new('/bundles/oliverde8phpetl/vendor/cytoscape-dagre.min.js')->onlyOnDetail())
+            ->addJsFile(Asset::new('/bundles/oliverde8phpetl/js/execution-graph.js')->onlyOnDetail());
+    }
+
+    /**
+     * Mercure config ({url, topic}) for the live graph widget, or null when
+     * Mercure is unavailable — the widget then degrades to polling (running) or
+     * a static graph (finished).
+     *
+     * Topics are private, so this also authorizes the current browser to
+     * subscribe to this one execution's topic (e.g. sets a scoped Mercure
+     * cookie). This only runs while rendering that execution's detail page —
+     * it grants no broader access, but note EtlExecutionVoter itself is
+     * currently a permissive stub, so real protection still comes from
+     * whatever firewall/access_control the host app puts around this page.
+     */
+    private function graphMercureConfig(EtlExecution $entity): ?array
+    {
+        if (!$this->statePublisher->isEnabled()) {
+            return null;
+        }
+
+        $url = $this->statePublisher->publicUrl();
+        if (null === $url) {
+            return null;
+        }
+
+        $request = $this->requestStack->getCurrentRequest();
+        if (null !== $request) {
+            $this->statePublisher->authorizeSubscriber($request, $entity);
+        }
+
+        return ['url' => $url, 'topic' => $this->statePublisher->topic($entity)];
     }
 
     public function configureFilters(Filters $filters): Filters

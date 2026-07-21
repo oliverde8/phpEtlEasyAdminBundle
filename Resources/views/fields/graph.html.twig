@@ -1,0 +1,6 @@
+{# Thin EasyAdmin skin: delegate to the reusable widget shipped by the php-etl
+   bundle. All graph logic lives there so other frontends can reuse it. #}
+{% include '@Oliverde8PhpEtl/observability/graph.html.twig' with {
+    execution: entity.instance,
+    mercure: field.formattedValue.mercure|default(null),
+} %}

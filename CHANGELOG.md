@@ -1,3 +1,6 @@
+# 2.1.0
+- :star2: Live execution graph on the execution detail page: an interactive Cytoscape graph with per-step stats (items in/out, time, async in flight) and a streaming log tail. Thin skin over the reusable widget shipped by `oliverde8/php-etl-bundle` — real-time via Mercure when available, static/poll otherwise.
+
 # 2.0.0 (2026-07-21)
 - :boom: **BC break**: now requires `oliverde8/php-etl-bundle` `^2.0`, `easycorp/easyadmin-bundle` `^5.2` and PHP `>=8.3`.
 - :star2: Compatibility with EasyAdmin 5, Symfony 7/8 and PHP 8.4 (constructor promotion, `FormField::addFieldset`, native return types, `getUserIdentifier()`).
