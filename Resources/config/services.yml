@@ -8,7 +8,8 @@ services:
     resource: '../../'
     exclude:
       - '../../DependencyInjection/'
-      - '../..//Entity/'
+      - '../../Entity/'
       - '../../Tests/'
       - '../../Etl/Operation'
+      - '../../vendor/'
 

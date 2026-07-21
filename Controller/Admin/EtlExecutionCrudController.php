@@ -19,14 +19,24 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
+use Oliverde8\PhpEtlBundle\Etl\ChainDefinitionInterface\ChainDefinitionInterface;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Oliverde8\PhpEtlBundle\Services\ChainProcessorsManager;
 use Oliverde8\PhpEtlBundle\Services\ExecutionContextFactory;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 class EtlExecutionCrudController extends AbstractCrudController
 {
-    public function __construct(protected ExecutionContextFactory $executionContextFactory, protected ChainProcessorsManager $chainProcessorManager, protected AdminUrlGenerator $adminUrlGenerator)
-    {
+    /**
+     * @param iterable<ChainDefinitionInterface> $chainDefinitions
+     */
+    public function __construct(
+        protected ExecutionContextFactory $executionContextFactory,
+        protected ChainProcessorsManager $chainProcessorManager,
+        protected AdminUrlGenerator $adminUrlGenerator,
+        #[AutowireIterator('etl.chain_definition')]
+        protected iterable $chainDefinitions = [],
+    ) {
     }
 
     public static function getEntityFqcn(): string
@@ -168,8 +178,8 @@ class EtlExecutionCrudController extends AbstractCrudController
     public function configureAssets(Assets $assets): Assets
     {
         return $assets
-            ->addJsFile('https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.4.1/jsoneditor.min.js')
-            ->addCssFile('https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.4.1/jsoneditor.min.css')
+            ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/vendor/jsoneditor/9.4.1/jsoneditor.min.js')
+            ->addCssFile('/bundles/oliverde8phpetleasyadmin/admin/vendor/jsoneditor/9.4.1/jsoneditor.min.css')
             ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/fields/json-editor.js');
     }
 
@@ -216,8 +226,15 @@ class EtlExecutionCrudController extends AbstractCrudController
     protected function getChainOptions(): array
     {
         $options = [];
+
+        // Legacy YAML chain definitions.
         foreach (array_keys($this->chainProcessorManager->getRawDefinitions()) as $definitionName) {
             $options[$definitionName] = $definitionName;
+        }
+
+        // V2 (PHP) chain definitions, tagged with etl.chain_definition.
+        foreach ($this->chainDefinitions as $definition) {
+            $options[$definition->getKey()] = $definition->getKey();
         }
 
         return $options;

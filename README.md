@@ -1,7 +1,5 @@
 # PHP Etl Easy Admin Bundle
 
-<!-- TO BE COMPLETED -->
-
 The Php etl easy admin bundle allows the usage of [Oliver's PHP Etl](https://github.com/oliverde8/php-etl) library in symfony. 
 Add's an integration to easy admin as well in order to see a list of the executions:
 
@@ -24,12 +22,14 @@ Also provides a dashboard to see current state.
 
 3. Enable bundle: 
 ```php
-    \Oliverde8\PhpEtlBundle\Oliverde8PhpEtlEasyAdminBundle::class => ['all' => true],
+    Oliverde8\PhpEtlEasyAdminBundle\Oliverde8PhpEtlEasyAdminBundle::class => ['all' => true],
 ```
 
 4. Add to easy admin
 ```php
-yield MenuItem::linktoRoute("Job Dashboard", 'fas fa-chart-bar', "etl_execution_dashboard");
+// EtlDashboardController exposes the stats page via #[AdminRoute(name: 'etl_execution_dashboard')].
+// EasyAdmin prefixes it with your Dashboard's own route name, e.g. "admin_etl_execution_dashboard".
+yield MenuItem::linkToRoute("Job Dashboard", 'fas fa-chart-bar', "admin_etl_execution_dashboard");
 yield MenuItem::linkToCrud('Etl Executions', 'fas fa-list', EtlExecution::class);
 ```
 
@@ -37,7 +37,7 @@ yield MenuItem::linkToCrud('Etl Executions', 'fas fa-list', EtlExecution::class)
 ```yaml
 etl_bundle:
   resource: '@Oliverde8PhpEtlEasyAdminBundle/Controller'
-  type: annotation
+  type: attribute
   prefix: /admin
 ```
 

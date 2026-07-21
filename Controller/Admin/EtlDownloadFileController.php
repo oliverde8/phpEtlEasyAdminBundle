@@ -7,12 +7,12 @@ namespace Oliverde8\PhpEtlEasyAdminBundle\Controller\Admin;
 use Oliverde8\PhpEtlBundle\Entity\EtlExecution;
 use Oliverde8\PhpEtlBundle\Security\EtlExecutionVoter;
 use Oliverde8\PhpEtlBundle\Services\ExecutionContextFactory;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 class EtlDownloadFileController extends AbstractController
 {
@@ -20,12 +20,12 @@ class EtlDownloadFileController extends AbstractController
     {
     }
 
-    /**
-     * @Route("/etl/execution/download", name="etl_execution_download_file")
-     *
-     * @ParamConverter(name="execution", Class="Oliverde8PhpEtlBundle:EtlExecution")
-     */
-    public function index(EtlExecution $execution, string $filename): Response
+    #[Route(
+        '/etl/execution/{execution}/download/{filename}',
+        name: 'etl_execution_download_file',
+        requirements: ['filename' => '.+'],
+    )]
+    public function index(#[MapEntity(id: 'execution')] EtlExecution $execution, string $filename): Response
     {
         $this->denyAccessUnlessGranted(EtlExecutionVoter::DOWNLOAD, EtlExecution::class);
 
