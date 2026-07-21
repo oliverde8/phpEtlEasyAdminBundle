@@ -10,13 +10,16 @@
     }
   ],
   "require": {
-    "php": ">=8.2",
-    "oliverde8/php-etl-bundle": "^v2.0.0-alpha1",
-    "easycorp/easyadmin-bundle": "^5.0"
+    "php": ">=8.3",
+    "oliverde8/php-etl-bundle": "^2.0",
+    "easycorp/easyadmin-bundle": "^5.2"
   },
   "autoload": {
     "psr-4": {
       "Oliverde8\\PhpEtlEasyAdminBundle\\": "."
     }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
   }
 }

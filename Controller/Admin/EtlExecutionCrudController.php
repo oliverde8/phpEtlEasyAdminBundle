@@ -178,8 +178,8 @@ class EtlExecutionCrudController extends AbstractCrudController
     public function configureAssets(Assets $assets): Assets
     {
         return $assets
-            ->addJsFile('https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.4.1/jsoneditor.min.js')
-            ->addCssFile('https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.4.1/jsoneditor.min.css')
+            ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/vendor/jsoneditor/9.4.1/jsoneditor.min.js')
+            ->addCssFile('/bundles/oliverde8phpetleasyadmin/admin/vendor/jsoneditor/9.4.1/jsoneditor.min.css')
             ->addJsFile('/bundles/oliverde8phpetleasyadmin/admin/fields/json-editor.js');
     }
 

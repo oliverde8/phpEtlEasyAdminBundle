@@ -9,7 +9,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-light mt-3">
         <label for="time_period" class="form-label">Time Period</label>
         <div class="col-6 col-lg-4 col-xl-2">
-            <select id="time_period" class="form-control" nama="time_period">
+            <select id="time_period" class="form-control" name="time_period">
                 <option value="24h" selected="selected">Last 7days</option>
             </select>
         </div>
@@ -53,7 +53,7 @@
                 </div>
                 <div class="card-body">
                     <h2 class="card-subtitle text-white">
-                        <a class="text-white" href="{{ ea_url({'filters': {'status': {'comparison': '=', 'value': ['sucess']}}}).setController(crudController) }}">
+                        <a class="text-white" href="{{ ea_url({'filters': {'status': {'comparison': '=', 'value': ['success']}}}).setController(crudController) }}">
                             {{ num_success }}
                         </a>
                     </h2>
