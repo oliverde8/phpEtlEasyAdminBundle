@@ -33,15 +33,30 @@ yield MenuItem::linkToRoute("Job Dashboard", 'fas fa-chart-bar', "admin_etl_exec
 yield MenuItem::linkToCrud('Etl Executions', 'fas fa-list', EtlExecution::class);
 ```
 
-5. Enable routes
+5. Enable routes. The execution detail page's live graph reads its data from the
+   php-etl bundle's endpoints, so its routes must be loaded too. Put both behind your admin firewall.
 ```yaml
 etl_bundle:
   resource: '@Oliverde8PhpEtlEasyAdminBundle/Controller'
   type: attribute
   prefix: /admin
+
+oliverde8_php_etl_observability:
+  resource: '@Oliverde8PhpEtlBundle/Controller/'
+  type: attribute
+  prefix: /admin
 ```
 
-6. Optional: Enable queue if you wish to allow users from the easy admin panel to do executions.
+6. Install the assets (the graph's JS/CSS are shipped by the php-etl bundle):
+```bash
+bin/console assets:install public
+```
+
+> **Security:** `EtlExecutionVoter` currently grants access to everyone. Access to executions,
+> their graph/state/log endpoints and their live updates is only protected by your own
+> firewall / `access_control` rules, so make sure `/admin` (or whatever prefix you use) is restricted.
+
+7. Optional: Enable queue if you wish to allow users from the easy admin panel to do executions.
 ```yaml
 framework:
   messenger:
@@ -49,13 +64,21 @@ framework:
         "Oliverde8\PhpEtlBundle\Message\EtlExecutionMessage": async
 ```
 
-6. Optional: Enable creation of individual files for each log by editing the monolog.yaml
+8. Optional: Enable creation of individual files for each log by editing the monolog.yaml
 ```yaml
 etl:
     type: service
     id: Oliverde8\PhpEtlBundle\Services\ChainExecutionLogger
     level: debug
     channels: ["!event"]
+```
+
+9. Optional: Real-time execution graph. Without anything extra the graph on the execution detail page
+   polls while an execution is running and is static once it is finished. Install and configure
+   `symfony/mercure-bundle` to get live updates pushed instead; the php-etl bundle detects it automatically.
+   Live updates only apply to executions run asynchronously (step 7).
+```bash
+composer require symfony/mercure-bundle
 ```
 
 ## Usage

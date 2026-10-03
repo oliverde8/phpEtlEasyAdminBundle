@@ -1,3 +1,10 @@
+# 2.1.0
+- :exclamation: Requires `oliverde8/php-etl-bundle` `^2.1` (and therefore `oliverde8/php-etl` `^2.1`).
+- :star2: Live execution graph on the execution detail page: an interactive Cytoscape graph with per-step stats (items in/out, time, async in flight) and a streaming log tail. Thin skin over the reusable widget shipped by `oliverde8/php-etl-bundle` — real-time via Mercure when available, static/poll otherwise.
+- :collision: The execution detail page no longer has the "Logs" field (first 100 lines + download button); the `fields/logs.html.twig` template was removed. Logs are now tailed live inside the graph widget, and `execution.log` can still be downloaded from the files list.
+- :collision: Name, username, status and timestamps moved from the "Details" fieldset into the graph widget's header.
+- :warning: The graph's JSON endpoints come from `oliverde8/php-etl-bundle`: their routes must be loaded and its assets installed (see README).
+
 # 2.0.0 (2026-07-21)
 - :boom: **BC break**: now requires `oliverde8/php-etl-bundle` `^2.0`, `easycorp/easyadmin-bundle` `^5.2` and PHP `>=8.3`.
 - :star2: Compatibility with EasyAdmin 5, Symfony 7/8 and PHP 8.4 (constructor promotion, `FormField::addFieldset`, native return types, `getUserIdentifier()`).
